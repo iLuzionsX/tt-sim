@@ -1,0 +1,10 @@
+export const towers=[{name:'North Tower',short:'WTC 1',height:417,low:93,high:99,pivot:98,minutes:102,flight:'AA 11 · Boeing 767',speed:'443 ± 30 mph',hour:8,minute:46,face:'south',entry:'north',sign:-1},{name:'South Tower',short:'WTC 2',height:415,low:77,high:85,pivot:81,minutes:56,flight:'UA 175 · Boeing 767',speed:'542 ± 24 mph',hour:9,minute:3,face:'east',entry:'south',sign:1}];
+export const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+// EN 1993-1-2:2005, Table 3.1. Generic effective yield and elastic-modulus factors.
+export const steelTable=[[20,1,1],[100,1,1],[200,1,.9],[300,1,.8],[400,1,.7],[500,.78,.6],[600,.47,.31],[700,.23,.13],[800,.11,.09],[900,.06,.0675],[1000,.04,.045]];
+export function steelAt(T,ksi=36){T=clamp(T,20,1000);let k=1;while(steelTable[k][0]<T)k++;const a=steelTable[k-1],b=steelTable[k],f=(T-a[0])/(b[0]-a[0]);const ky=a[1]+f*(b[1]-a[1]),ke=a[2]+f*(b[2]-a[2]);return{ky,ke,yieldMPa:ksi*6.894757*ky,modulusGPa:200*ke,expansionMM:12e-6*18.288*(T-20)*1000};}
+export function stateAt(t,index=0){const d=towers[index],fire=clamp((t-10)/90),deform=clamp((t-65)/35),collapse=clamp((t-100)/20);let phase=t<8?0:t<16?1:t<65?2:t<98?3:t<=100?4:5;return{d,phase,fire,deform,collapse,hit:t>=8,minutes:d.minutes*fire};}
+// Educational lumped heat balance, NOT a reconstruction of WTC member temperatures.
+// Surface radiation is linearized exactly between gas and steel temperatures.
+// A massless insulation resistance is placed in series with the surface coefficient.
+export function heatingCurve(gasC=900,insulationMM=0,minutes=60,dt=1){let T=20;const values=[20],rho=7850,cp=600,sectionFactor=150,hConv=25,emissivity=.7,sigma=5.670374419e-8,kIns=.12;const rate=temp=>{const g=gasC+273.15,s=temp+273.15,hRad=emissivity*sigma*(g*g+s*s)*(g+s),U=1/(1/(hConv+hRad)+(insulationMM/1000)/kIns);return sectionFactor*U*(gasC-temp)/(rho*cp);};const steps=Math.round(minutes*60/dt);for(let i=1;i<=steps;i++){T+=dt*rate(T+dt*.5*rate(T));if(i%Math.round(60/dt)===0)values.push(T);}return values;}
